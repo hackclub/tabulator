@@ -21,28 +21,82 @@ module HCB
     JSON.parse(res.body)
   end
 
-  def self.org(slug)
-    get("/organizations/#{slug}")
+  def self.get_or_nil(path)
+    res = connection.get("/api/v3#{path}")
+    return nil unless res.is_a?(Net::HTTPSuccess)
+    JSON.parse(res.body)
   end
 
-  def self.transactions(slug)
-    txns = []
-    page = 1
-    loop do
-      batch = get("/organizations/#{slug}/transactions?per_page=100&page=#{page}")
-      break if batch.empty?
-      txns.concat(batch)
-      page += 1
+  class Org
+    attr_reader :id, :name, :slug, :balance_cents
+
+    def initialize(slug)
+      data = HCB.get("/organizations/#{slug}")
+      @id = data["id"]
+      @name = data["name"]
+      @slug = slug
+      @balance_cents = data.dig("balances", "balance_cents")
     end
-    txns
+
+    def transactions
+      @transactions ||= fetch_all_transactions.map { |data| Transaction.new(data, self) }
+    end
+
+    private
+
+    def fetch_all_transactions
+      Enumerator.new do |y|
+        page = 1
+        loop do
+          batch = HCB.get("/organizations/#{slug}/transactions?per_page=100&page=#{page}")
+          break if batch.empty?
+          batch.each { |t| y << t }
+          page += 1
+        end
+      end.to_a
+    end
   end
 
-  def self.transfer(href)
-    path = href.sub("https://hcb.hackclub.com/api/v3", "")
-    data = get(path)
-    {
-      source_org_id: data.dig("source_organization", "id"),
-      dest_org_id: data.dig("organization", "id")
-    }
+  class Transfer
+    attr_reader :source_org_id, :dest_org_id
+
+    def self.fetch(href)
+      path = href.sub("https://hcb.hackclub.com/api/v3", "")
+      data = HCB.get_or_nil(path)
+      data ? new(data) : nil
+    end
+
+    def initialize(data)
+      @source_org_id = data.dig("source_organization", "id")
+      @dest_org_id = data.dig("organization", "id")
+    end
+  end
+
+  class Transaction
+    attr_reader :id, :amount_cents, :memo, :date, :type, :tag
+
+    def initialize(data, org)
+      @id = data["id"]
+      @amount_cents = data["amount_cents"]
+      @memo = data["memo"]
+      @date = data["date"]
+      @type = data["type"]
+      @org = org
+      @transfer = Transfer.fetch(data["transfer"]["href"]) if data["type"] == "transfer" && data["transfer"]
+      @tag = Rules.classify(self)
+    end
+
+    def transfer? = !!@transfer
+    def cost? = @tag == "cost"
+    def inflow? = @tag == "inflow"
+    def excluded? = !cost?
+
+    def source_org_id = @transfer&.source_org_id
+    def dest_org_id = @transfer&.dest_org_id
+    def org_id = @org.id
+
+    def to_h
+      { id:, amount_cents:, memo:, date:, type:, tag: }
+    end
   end
 end

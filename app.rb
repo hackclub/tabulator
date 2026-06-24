@@ -12,8 +12,7 @@ end
 
 get "/organizations/:slug" do
   content_type :json
-  result = Pipeline.run(params[:slug])
-  result.to_json
+  Pipeline.new(params[:slug]).to_h.to_json
 rescue => e
   status 500
   { error: e.message }.to_json
