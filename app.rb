@@ -4,6 +4,7 @@ require_relative "pipeline"
 
 set :bind, "0.0.0.0"
 set :port, ENV.fetch("PORT", 4567)
+set :host_authorization, permitted: ENV.fetch("PERMITTED_HOSTS", "").split(",").push("localhost")
 
 get "/" do
   content_type :json
