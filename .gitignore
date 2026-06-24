@@ -1,0 +1,21 @@
+# Data files — fetched at runtime, not committed
+raw_transactions.csv
+disbursements.csv
+organizer_budgets.txt
+data_fixes.csv
+
+# Generated output
+tagged_transactions.csv
+cost_transactions.csv
+
+# Ruby
+.bundle/
+vendor/bundle/
+Gemfile.lock
+
+# macOS
+.DS_Store
+
+# Editor
+*.swp
+*.swo
