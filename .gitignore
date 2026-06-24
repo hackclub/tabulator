@@ -1,6 +1,7 @@
 # Data files — fetched at runtime, not committed
 raw_transactions.csv
 disbursements.csv
+data_fixes.csv
 
 # Generated output
 tagged_transactions.csv
