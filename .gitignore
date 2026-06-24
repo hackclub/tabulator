@@ -10,7 +10,6 @@ cost_transactions.csv
 # Ruby
 .bundle/
 vendor/bundle/
-Gemfile.lock
 
 # macOS
 .DS_Store
